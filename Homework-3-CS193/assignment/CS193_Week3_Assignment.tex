@@ -1,0 +1,163 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{amssymb}
+% Configuration for code snippets (shell/bash style)
+\lstset{
+    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    rulecolor=\color{black!30},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!50!black}
+}
+% Hyperlink styling
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+% Title Formatting
+\titleformat{\section}{\normalfont\Large\bfseries}{}{0pt}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{}{0pt}{}
+% NOTE TO COURSE STAFF: Replace the Ed Discussion thread name in the
+% Submission section with the actual thread you want students posting to
+% before publishing.
+\begin{document}
+% --- HEADER SECTION ---
+\begin{center}
+    {\Huge \textbf{CS193}} \\
+    \vspace{2mm}
+    {\Large \textbf{Homework - Week 3}} \\
+    \vspace{2mm}
+    {\large Exploring Real Weather Data from the Command Line} \\
+\end{center}
+
+% --- INTRODUCTION ---
+\section{Introduction}
+In lecture you learned how to go beyond typing one command at a time and start \textbf{combining commands} in bash --- finding files, and chaining tools together with \textbf{pipes and filters}. This week you'll put those skills to work on a real dataset.
+\\\\
+The data comes from \textbf{WHIN} (the \href{https://www.whin.org/weather}{Wabash Heartland Innovation Network}), which runs a dense network of weather stations across a 10-county region of north-central Indiana. You'll work with a fixed snapshot of readings from \textbf{24 stations} and answer questions about it entirely from the command line.
+\\\\
+You only need \textbf{bash and a terminal} --- no other languages, no installs. A helpful companion reference is \textit{The Linux Command Line} (\href{https://linuxcommand.org/tlcl.php}{linuxcommand.org/tlcl.php}), especially the chapters on navigation and I/O redirection.
+
+% --- GETTING STARTED ---
+\section{Getting Started}
+Download and unzip the \texttt{cs193\_week3} folder. It already contains everything you need:
+\begin{itemize}
+    \item \texttt{whin\_stations.csv} --- the snapshot, with \textbf{one row per station}. Columns are: \texttt{station\_id}, \texttt{station\_name}, \texttt{county}, \texttt{latitude}, \texttt{longitude}, \texttt{temp\_f}, \texttt{humidity\_pct}, \texttt{wind\_mph}, \texttt{rain\_in}, \texttt{soil\_moist\_pct}, \texttt{observed\_at}.
+    \item \texttt{station\_logs/} --- one log file per station, each with that station's hourly readings.
+\end{itemize}
+
+% --- HOW TO RUN ---
+\section{How to Work Through It}
+\begin{enumerate}
+    \item Open a terminal (in VS Code: \textbf{Terminal \(\rightarrow\) New Terminal}, or any terminal app).
+    \item \texttt{cd} into the project folder so the file names below work:
+\begin{lstlisting}[language=bash]
+$ cd cs193_week3
+\end{lstlisting}
+    \item Run each command below, read the output, and record your answer. No server, compiler, or installation is required --- it's plain bash.
+\end{enumerate}
+
+% --- PART A ---
+\section{Part A --- Finding Your Way Around (~7 min)}
+Every station writes its own log file. Let's locate them.
+
+\begin{enumerate}[label=\textbf{A\arabic*.}]
+    \item List the log files, then count them. How many stations logged data today?
+\begin{lstlisting}[language=bash]
+$ ls station_logs
+$ ls station_logs | wc -l
+\end{lstlisting}
+
+    \item Now count \textit{every} CSV file in the folder, including the snapshot. \texttt{find} searches inside sub-folders for you.
+\begin{lstlisting}[language=bash]
+$ find . -name "*.csv" | wc -l
+\end{lstlisting}
+
+    \item WHIN's Tippecanoe County stations all start with \texttt{TIP}. List just those log files.
+\begin{lstlisting}[language=bash]
+$ find station_logs -name "TIP*"
+\end{lstlisting}
+
+    \item Print the full path of every \textbf{White County} log file (their IDs start with \texttt{WHI}).
+\begin{lstlisting}[language=bash]
+$ find station_logs -name "WHI*"
+\end{lstlisting}
+\end{enumerate}
+
+% --- PART B ---
+\section{Part B --- Reading the Data with Pipes \& Filters (~10 min)}
+Now work with the snapshot file \texttt{whin\_stations.csv}.
+
+\begin{enumerate}[label=\textbf{B\arabic*.}]
+    \item Peek at the first 5 lines. What does the very first line contain?
+\begin{lstlisting}[language=bash]
+$ head -5 whin_stations.csv
+\end{lstlisting}
+
+    \item How many stations are in the snapshot? The header row is not a station, so skip it with \texttt{tail -n +2} (``start at line 2'').
+\begin{lstlisting}[language=bash]
+$ tail -n +2 whin_stations.csv | wc -l
+\end{lstlisting}
+
+    \item Print just the station names (column 2). The file is comma-separated, so tell \texttt{cut} the delimiter is a comma.
+\begin{lstlisting}[language=bash]
+$ cut -d, -f2 whin_stations.csv
+\end{lstlisting}
+
+    \item How many stations are in \textbf{Tippecanoe} County? \texttt{grep -c} counts matching lines.
+\begin{lstlisting}[language=bash]
+$ grep -c Tippecanoe whin_stations.csv
+\end{lstlisting}
+
+    \item Count how many stations are in \textit{each} county. Chain four tools: take the county column, sort it, then collapse duplicates with a count.
+\begin{lstlisting}[language=bash]
+$ tail -n +2 whin_stations.csv | cut -d, -f3 | sort | uniq -c
+\end{lstlisting}
+
+    \item Which station is the \textbf{coolest} in this snapshot? Temperature is column 6. Sort the rows numerically by that column and take the first one.
+\begin{lstlisting}[language=bash]
+$ tail -n +2 whin_stations.csv | sort -t, -k6 -n | head -1
+\end{lstlisting}
+\end{enumerate}
+
+\textbf{Challenge (optional):} Write a \textbf{single command line} that prints only the station names in \textbf{White} County. Hint: \texttt{grep} to pick the rows, then pipe into \texttt{cut} to keep the name column.
+
+% --- SUBMITTING ---
+\section{How to Submit}
+\begin{enumerate}
+    \item Paste each command you ran and its output into a plain-text file named \texttt{week3\_lastname.txt}.
+    \item At the bottom, add one sentence answering: \textit{``Which county has the most stations, and how did you find out?''}
+    \item Go to Ed Discussion and open the \textbf{Week 3} submission thread.
+    \item Create a new post, attach your \texttt{week3\_lastname.txt}, and submit.
+\end{enumerate}
+
+% --- GRADING ---
+\section{Grading}
+\begin{itemize}
+    \item \textbf{A1} --- count the log files with \texttt{ls | wc -l} --- 10 pts
+    \item \textbf{A2} --- count all CSVs with \texttt{find ... | wc -l} --- 10 pts
+    \item \textbf{A3} --- list \texttt{TIP*} files with \texttt{find} --- 10 pts
+    \item \textbf{A4} --- list \texttt{WHI*} files with \texttt{find} --- 10 pts
+    \item \textbf{B1} --- \texttt{head}; identifies the first line as the header row --- 8 pts
+    \item \textbf{B2} --- skips the header with \texttt{tail -n +2} and counts with \texttt{wc -l} --- 8 pts
+    \item \textbf{B3} --- extracts the name column with \texttt{cut -d, -f2} --- 8 pts
+    \item \textbf{B4} --- counts Tippecanoe rows with \texttt{grep -c} --- 8 pts
+    \item \textbf{B5} --- \texttt{cut | sort | uniq -c} chain for per-county counts --- 10 pts
+    \item \textbf{B6} --- \texttt{sort -t, -k6 -n | head -1} for the coolest station --- 8 pts
+    \item \textbf{Submission \& reflection} --- correctly named file with commands, outputs, and the reflection sentence --- 10 pts
+    \item \textbf{Challenge (bonus)} --- \texttt{grep White | cut -d, -f2} in one line --- +5 pts
+\end{itemize}
+\textbf{Total: 100 points (+5 bonus).}
+
+\end{document}
